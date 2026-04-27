@@ -1098,6 +1098,81 @@ function setProgress(pct, text, state) {
   if (state) document.getElementById('statusDot').className = 'status-dot ' + state;
 }
 
+function buildLocalEstimate({ projectName, buildingType, gsf, stories, location, deliveryYear, scopeNotes }) {
+  const baseCostPerSF = {
+    office: 320,
+    medical: 470,
+    industrial: 280,
+    residential: 300,
+    education: 360,
+    hospitality: 390,
+    data_center: 620,
+    laboratory: 540,
+    warehouse: 220,
+    retail: 290
+  };
+  const localFactor = /ny|new york|san francisco|seattle|boston|los angeles|dc|washington/i.test(location) ? 1.15 : 1.0;
+  const storyFactor = stories > 1 ? 1 + ((stories - 1) * 0.015) : 1;
+  const complexityFactor = /leed|clean room|imaging|surgery|specialty|critical/i.test(scopeNotes) ? 1.08 : 1.0;
+  const costPerSF = Math.round((baseCostPerSF[buildingType] || 320) * localFactor * storyFactor * complexityFactor);
+
+  const hardCosts = Math.round((gsf || 0) * costPerSF);
+  const softCosts = Math.round(hardCosts * 0.2);
+  const contingencyAmt = Math.round(hardCosts * 0.08);
+  const escalationYears = Math.max(0, (deliveryYear || 2026) - 2026);
+  const escalationRate = 0.05;
+  const escalationAmt = Math.round((hardCosts + softCosts + contingencyAmt) * (Math.pow(1 + escalationRate, escalationYears) - 1));
+  const totalMid = hardCosts + softCosts + contingencyAmt + escalationAmt;
+  const totalLow = Math.round(totalMid * 0.92);
+  const totalHigh = Math.round(totalMid * 1.11);
+
+  return {
+    extractedParams: {
+      gsf: gsf || 0,
+      buildingType,
+      location,
+      deliveryYear,
+      confidence: 'MEDIUM',
+      confidenceNote: 'Fallback estimate used because AI service was unavailable.'
+    },
+    summary: { costPerSF, hardCosts, softCosts, contingencyAmt, escalationAmt, totalMid, totalLow, totalHigh },
+    divisions: [
+      { group: 'DIV 03 — CONCRETE', items: [{ num: '03 30 00', name: 'Cast-in-Place Concrete', qty: Math.round((gsf || 0) * 0.2), unit: 'SF', unitCost: 22, total: Math.round(hardCosts * 0.12), details: [{ name: 'Footings', spec: '3000 PSI' }, { name: 'Slab on Grade', spec: 'Vapor Barrier' }] }] },
+      { group: 'DIV 05 — METALS', items: [{ num: '05 12 00', name: 'Structural Steel Framing', qty: Math.round((gsf || 0) * 0.1), unit: 'TN', unitCost: 3800, total: Math.round(hardCosts * 0.16), details: [{ name: 'Wide Flange', spec: 'A992' }, { name: 'Connections', spec: 'Bolted/Welded' }] }] },
+      { group: 'DIV 15-23 — MEP SYSTEMS', items: [{ num: '23 00 00', name: 'HVAC + Plumbing + Electrical', qty: gsf || 0, unit: 'SF', unitCost: Math.round(costPerSF * 0.33), total: Math.round(hardCosts * 0.34), details: [{ name: 'HVAC', spec: 'VAV System' }, { name: 'Electrical', spec: 'LED + Panels' }] }] }
+    ],
+    contingencyScenarios: [
+      { scenario: 'Conservative', yearRange: '2026-2027', pctAdded: 6.0, amount: Math.round(totalMid * 0.06), total: Math.round(totalMid * 1.06), factors: ['Stable labor market', 'Normal material lead times', 'Low procurement volatility'] },
+      { scenario: 'Base Case', yearRange: '2028-2029', pctAdded: 10.0, amount: Math.round(totalMid * 0.1), total: Math.round(totalMid * 1.1), factors: ['Moderate inflation', 'Regional labor pressure', 'Typical tariff exposure'] },
+      { scenario: 'Escalated', yearRange: '2030-2031', pctAdded: 15.0, amount: Math.round(totalMid * 0.15), total: Math.round(totalMid * 1.15), factors: ['High wage escalation', 'Commodity price spikes', 'Extended procurement risks'] }
+    ],
+    contingencyBreakdown: [
+      { label: 'Design Contingency', pct: 2.5, amt: Math.round(totalMid * 0.025) },
+      { label: 'Construction Contingency', pct: 3.5, amt: Math.round(totalMid * 0.035) },
+      { label: 'Escalation', pct: 3.0, amt: Math.round(totalMid * 0.03) },
+      { label: 'Owner Reserve', pct: 1.0, amt: Math.round(totalMid * 0.01) }
+    ],
+    valueEngineering: [
+      { title: 'Alternate glazing package', description: 'Swap to high-performance standard IGU where feasible.', savings: Math.round(hardCosts * 0.015), risk: 'low' },
+      { title: 'Standardized partition types', description: 'Reduce custom wall assemblies.', savings: Math.round(hardCosts * 0.01), risk: 'low' }
+    ],
+    cashFlow: [
+      { phase: 'Mobilization', months: '1-2', pct: 6 },
+      { phase: 'Foundation', months: '3-5', pct: 12 },
+      { phase: 'Structure', months: '6-10', pct: 24 },
+      { phase: 'Envelope', months: '11-14', pct: 17 },
+      { phase: 'MEP Rough', months: '15-18', pct: 19 },
+      { phase: 'Finishes', months: '19-22', pct: 17 },
+      { phase: 'Closeout', months: '23-24', pct: 5 }
+    ],
+    risks: [
+      { icon: '⚠', title: 'Long-lead equipment', desc: 'Major MEP equipment may impact schedule float.', severity: 'med' },
+      { icon: '📈', title: 'Escalation volatility', desc: 'Material pricing remains sensitive to market swings.', severity: 'med' }
+    ],
+    narrative: `This is a fallback conceptual estimate for ${projectName} in ${location}, developed from the fillable input fields. The AI service call was unavailable, so this output uses benchmark unit-cost logic and standard cost composition assumptions. Validate with quantity takeoff and local subcontractor pricing before procurement.`
+  };
+}
+
 // ── Main estimate ──
 async function runEstimate() {
   const nlInput    = document.getElementById('nlInput').value.trim();
@@ -1219,7 +1294,11 @@ REQUIREMENTS:
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': window.ANTHROPIC_API_KEY || '',
+        'anthropic-version': '2023-06-01'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 8000,
@@ -1251,7 +1330,10 @@ REQUIREMENTS:
     renderResults(est, estimateData);
 
   } catch(err) {
-    setProgress(0, '✗ ' + err.message, 'error');
+    const fallback = buildLocalEstimate({ projectName, buildingType, gsf, stories, location, deliveryYear, scopeNotes });
+    estimateData = { ...fallback, projectName, buildingType, gsf, stories, location, deliveryYear };
+    renderResults(fallback, estimateData);
+    setProgress(100, '⚠ AI fetch failed. Fallback estimate generated.', 'done');
     console.error(err);
   }
 
