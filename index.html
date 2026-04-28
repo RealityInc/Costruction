@@ -412,6 +412,18 @@ border-radius: 8px;
 padding: 18px;
 margin-bottom: 14px;
 }
+#sanityWarning {
+display: none;
+background: rgba(251,146,60,0.08);
+border: 1px solid rgba(251,146,60,0.45);
+border-left: 3px solid var(--warning);
+border-radius: 8px;
+padding: 12px 14px;
+font-size: 12px;
+line-height: 1.5;
+margin-bottom: 14px;
+}
+#sanityWarning.visible { display: block; }
 .narrative-header {
 display: flex;
 align-items: center;
@@ -467,7 +479,7 @@ table {
 width: 100%;
 border-collapse: collapse;
 font-size: 12px;
-min-width: 560px;
+min-width: 920px;
 }
 
 thead th {
@@ -513,6 +525,14 @@ cursor: pointer;
 .div-num { font-family: var(--mono); font-size: 10px; color: var(--muted); white-space: nowrap; }
 .div-name { font-weight: 500; font-size: 12px; }
 .div-qty { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.div-assume { font-size: 10px; color: var(--muted); }
+.div-confidence { font-family: var(--mono); font-size: 10px; }
+.div-adjust {
+width: 95px;
+padding: 6px 8px;
+font-size: 11px;
+text-align: right;
+}
 .div-unit { font-family: var(--mono); font-size: 10px; color: var(--muted); }
 .div-ucost { font-family: var(--mono); font-size: 11px; }
 .div-total { font-family: var(--mono); font-size: 12px; font-weight: 500; }
@@ -799,6 +819,16 @@ transition: all 0.15s;
 letter-spacing: 0.5px;
 }
 .btn-export:hover { border-color: var(--accent); color: var(--accent); }
+.disclaimer {
+margin-top: 14px;
+padding: 12px;
+border-radius: 8px;
+border: 1px solid var(--border);
+background: var(--surface2);
+font-size: 11px;
+color: var(--muted);
+line-height: 1.5;
+}
 
 /* ── RESPONSIVE ── */
 @media (min-width: 700px) {
@@ -905,6 +935,75 @@ header { padding: 16px 28px; }
         <option value="2031">2031 — +5 yrs</option>
       </select>
     </div>
+    <div>
+      <label class="field-label">Estimate Phase</label>
+      <select id="estimatePhase">
+        <option value="Conceptual" selected>Conceptual</option>
+        <option value="SD">SD</option>
+        <option value="DD">DD</option>
+        <option value="CD">CD</option>
+        <option value="Bid">Bid</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label">Project Type</label>
+      <select id="projectNature">
+        <option value="new" selected>New Construction</option>
+        <option value="renovation">Renovation / TI</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label">Labor Basis</label>
+      <select id="laborBasis">
+        <option value="nonunion" selected>Non-Union</option>
+        <option value="union">Union</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label">Site Complexity</label>
+      <select id="siteComplexity">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label">Structure Type</label>
+      <select id="structureType">
+        <option value="steel" selected>Steel</option>
+        <option value="concrete">Concrete</option>
+        <option value="wood">Wood</option>
+        <option value="hybrid">Hybrid</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label">Envelope Type</label>
+      <select id="envelopeType">
+        <option value="standard" selected>Standard</option>
+        <option value="high_performance">High Performance</option>
+        <option value="curtain_wall">Curtain Wall</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label">MEP Complexity</label>
+      <select id="mepComplexity">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label">General Requirements %</label>
+      <input type="number" id="gcPct" value="8" min="3" max="18" step="0.5">
+    </div>
+    <div>
+      <label class="field-label">Contingency %</label>
+      <input type="number" id="contingencyPct" value="8" min="0" max="25" step="0.5">
+    </div>
+    <div>
+      <label class="field-label">OH&P %</label>
+      <input type="number" id="ohpPct" value="7" min="2" max="20" step="0.5">
+    </div>
     <div class="config-full">
       <label class="field-label">Special Systems / Scope Notes</label>
       <input type="text" id="scopeNotes" placeholder="e.g. LEED Gold, clean rooms, data center, specialty MEP...">
@@ -985,7 +1084,8 @@ header { padding: 16px 28px; }
 </div>
 
 <!-- CSI Table -->
-<div class="section-label">CSI MasterFormat Breakdown</div>
+<div class="section-label">Estimate Breakdown</div>
+<div id="sanityWarning"></div>
 <div class="divisions-box">
   <div class="divisions-table-wrap">
     <table>
@@ -993,16 +1093,22 @@ header { padding: 16px 28px; }
         <tr>
           <th>Div</th>
           <th>Description</th>
-          <th>Qty</th>
-          <th>Unit</th>
-          <th>$/Unit</th>
-          <th>Total</th>
-          <th>%</th>
+          <th>Cost</th>
+          <th>$/SF</th>
+          <th>% Total</th>
+          <th>Quantity / Basis</th>
+          <th>Assumptions</th>
+          <th>Confidence</th>
+          <th>Adjustment</th>
+          <th>Adjusted</th>
         </tr>
       </thead>
       <tbody id="divisionsBody"></tbody>
     </table>
   </div>
+</div>
+<div style="display:flex;justify-content:flex-end;margin:8px 0 14px">
+  <button class="btn-export" onclick="recalculateEstimate()">↻ Recalculate</button>
 </div>
 
 <!-- Contingency -->
@@ -1043,8 +1149,11 @@ header { padding: 16px 28px; }
 <!-- Export -->
 <div class="export-row">
   <button class="btn-export" onclick="exportCSV()">↓ CSV Export</button>
-  <button class="btn-export" onclick="window.print()">⎙ Print</button>
+  <button class="btn-export" onclick="window.print()">⎙ Print / PDF</button>
   <button class="btn-export" onclick="copyToClipboard()">⊡ Copy Summary</button>
+</div>
+<div class="disclaimer">
+  This is a conceptual estimate for planning purposes only. It should be calibrated against project-specific drawings, specifications, local market data, and estimator review.
 </div>
 ```
 
@@ -1098,49 +1207,86 @@ function setProgress(pct, text, state) {
   if (state) document.getElementById('statusDot').className = 'status-dot ' + state;
 }
 
-function buildLocalEstimate({ projectName, buildingType, gsf, stories, location, deliveryYear, scopeNotes }) {
-  const baseCostPerSF = {
-    office: 320,
-    medical: 470,
-    industrial: 280,
-    residential: 300,
-    education: 360,
-    hospitality: 390,
-    data_center: 620,
-    laboratory: 540,
-    warehouse: 220,
-    retail: 290
-  };
-  const localFactor = /ny|new york|san francisco|seattle|boston|los angeles|dc|washington/i.test(location) ? 1.15 : 1.0;
-  const storyFactor = stories > 1 ? 1 + ((stories - 1) * 0.015) : 1;
-  const complexityFactor = /leed|clean room|imaging|surgery|specialty|critical/i.test(scopeNotes) ? 1.08 : 1.0;
-  const costPerSF = Math.round((baseCostPerSF[buildingType] || 320) * localFactor * storyFactor * complexityFactor);
+const MASTER_DIVISIONS = [
+  ['01', 'General Requirements'], ['02', 'Existing Conditions'], ['03', 'Concrete'], ['04', 'Masonry'],
+  ['05', 'Metals'], ['06', 'Wood, Plastics, and Composites'], ['07', 'Thermal and Moisture Protection'],
+  ['08', 'Openings'], ['09', 'Finishes'], ['10', 'Specialties'], ['11', 'Equipment'], ['12', 'Furnishings'],
+  ['13', 'Special Construction'], ['14', 'Conveying Equipment'], ['21', 'Fire Suppression'],
+  ['22', 'Plumbing'], ['23', 'HVAC'], ['25', 'Integrated Automation'], ['26', 'Electrical'],
+  ['27', 'Communications'], ['28', 'Electronic Safety and Security'], ['31', 'Earthwork'],
+  ['32', 'Exterior Improvements'], ['33', 'Utilities']
+];
 
-  const hardCosts = Math.round((gsf || 0) * costPerSF);
+function extractDocumentScope(text) {
+  const hits = [];
+  const blob = (text || '').toLowerCase();
+  MASTER_DIVISIONS.forEach(([num, name]) => {
+    if (blob.includes(`division ${num}`) || blob.includes(name.toLowerCase()) || blob.includes(`${num} `)) hits.push(`${num} ${name}`);
+  });
+  return [...new Set(hits)];
+}
+
+function buildLocalEstimate(input) {
+  const { projectName, buildingType, gsf, stories, location, deliveryYear, scopeNotes, estimatePhase, projectNature, laborBasis, siteComplexity, structureType, envelopeType, mepComplexity, contingencyPct, gcPct, ohpPct } = input;
+  const baseCostPerSF = { office: 320, medical: 470, industrial: 280, residential: 300, education: 360, hospitality: 390, data_center: 620, laboratory: 540, warehouse: 220, retail: 290 };
+  const locationFactor = /ny|new york|san francisco|seattle|boston|los angeles|dc|washington|chicago/i.test(location) ? 1.15 : 1.0;
+  const phaseFactor = { Conceptual: 1.04, SD: 1.02, DD: 1.0, CD: 0.99, Bid: 0.98 }[estimatePhase] || 1;
+  const renovationFactor = projectNature === 'renovation' ? 1.12 : 1;
+  const laborFactor = laborBasis === 'union' ? 1.08 : 1;
+  const siteFactor = siteComplexity === 'high' ? 1.08 : siteComplexity === 'low' ? 0.96 : 1;
+  const structureFactor = structureType === 'concrete' ? 1.05 : structureType === 'wood' ? 0.93 : 1;
+  const envelopeFactor = envelopeType === 'curtain_wall' ? 1.08 : envelopeType === 'high_performance' ? 1.05 : 1;
+  const mepFactor = mepComplexity === 'high' ? 1.1 : mepComplexity === 'low' ? 0.94 : 1;
+  const storyFactor = stories > 1 ? 1 + ((stories - 1) * 0.015) : 1;
+  const scopeFactor = /leed|clean room|imaging|surgery|specialty|critical/i.test(scopeNotes) ? 1.06 : 1;
+  const baselineCostPerSF = Math.round((baseCostPerSF[buildingType] || 320) * locationFactor * phaseFactor * renovationFactor * laborFactor * siteFactor * structureFactor * envelopeFactor * mepFactor * storyFactor * scopeFactor);
+  const hardCosts = Math.round((gsf || 0) * baselineCostPerSF);
   const softCosts = Math.round(hardCosts * 0.2);
-  const contingencyAmt = Math.round(hardCosts * 0.08);
+  const contingencyAmt = Math.round(hardCosts * ((contingencyPct || 8) / 100));
+  const gcAmt = Math.round(hardCosts * ((gcPct || 8) / 100));
+  const ohpAmt = Math.round(hardCosts * ((ohpPct || 7) / 100));
   const escalationYears = Math.max(0, (deliveryYear || 2026) - 2026);
-  const escalationRate = 0.05;
-  const escalationAmt = Math.round((hardCosts + softCosts + contingencyAmt) * (Math.pow(1 + escalationRate, escalationYears) - 1));
-  const totalMid = hardCosts + softCosts + contingencyAmt + escalationAmt;
+  const escalationAmt = Math.round((hardCosts + softCosts + contingencyAmt + gcAmt + ohpAmt) * (Math.pow(1 + 0.05, escalationYears) - 1));
+  const totalMid = hardCosts + softCosts + contingencyAmt + escalationAmt + gcAmt + ohpAmt;
   const totalLow = Math.round(totalMid * 0.92);
   const totalHigh = Math.round(totalMid * 1.11);
+  const divisor = Math.max(1, gsf || 1);
+
+  const pctMap = { '01': 0.06, '02': 0.015, '03': 0.09, '04': 0.03, '05': 0.09, '06': 0.035, '07': 0.065, '08': 0.055, '09': 0.08, '10': 0.02, '11': 0.015, '12': 0.01, '13': 0.008, '14': 0.012, '21': 0.025, '22': 0.04, '23': 0.11, '25': 0.01, '26': 0.085, '27': 0.018, '28': 0.014, '31': 0.05, '32': 0.035, '33': 0.028 };
+  const pctTotal = Object.values(pctMap).reduce((a,b)=>a+b,0);
+
+  const divisions = MASTER_DIVISIONS.map(([num, name]) => {
+    const include = !(['13','14','25','27','28'].includes(num) && !/medical|data_center|laboratory|education|security|automation|smart/i.test(`${buildingType} ${scopeNotes}`));
+    const normalizedPct = (pctMap[num] || 0) / pctTotal;
+    const cost = include ? Math.round(hardCosts * normalizedPct) : 0;
+    const basis = include ? `${(gsf || 0).toLocaleString()} SF basis` : 'Not included / $0';
+    const assumptions = include ? `${estimatePhase} phase; ${projectNature}; ${laborBasis}; ${siteComplexity} site.` : `Not in current scope for this project type.`;
+    return {
+      group: `DIV ${num} — ${name}`,
+      items: [{
+        num: `${num} 00 00`,
+        name,
+        qty: gsf || 0,
+        unit: 'SF',
+        unitCost: Math.round(cost / divisor),
+        total: cost,
+        basis,
+        assumptions,
+        confidence: estimatePhase === 'Conceptual' ? 'LOW' : 'MEDIUM',
+        adjustmentPct: 0,
+        notIncluded: !include,
+        details: [{ name: include ? 'Allowance' : 'Excluded', spec: assumptions }]
+      }]
+    };
+  });
 
   return {
     extractedParams: {
-      gsf: gsf || 0,
-      buildingType,
-      location,
-      deliveryYear,
-      confidence: 'MEDIUM',
-      confidenceNote: 'Fallback estimate used because AI service was unavailable.'
+      gsf: gsf || 0, buildingType, location, deliveryYear, confidence: estimatePhase === 'Bid' ? 'HIGH' : 'MEDIUM',
+      confidenceNote: 'Calibrated local estimate with baseline $/SF and CSI division distribution.'
     },
-    summary: { costPerSF, hardCosts, softCosts, contingencyAmt, escalationAmt, totalMid, totalLow, totalHigh },
-    divisions: [
-      { group: 'DIV 03 — CONCRETE', items: [{ num: '03 30 00', name: 'Cast-in-Place Concrete', qty: Math.round((gsf || 0) * 0.2), unit: 'SF', unitCost: 22, total: Math.round(hardCosts * 0.12), details: [{ name: 'Footings', spec: '3000 PSI' }, { name: 'Slab on Grade', spec: 'Vapor Barrier' }] }] },
-      { group: 'DIV 05 — METALS', items: [{ num: '05 12 00', name: 'Structural Steel Framing', qty: Math.round((gsf || 0) * 0.1), unit: 'TN', unitCost: 3800, total: Math.round(hardCosts * 0.16), details: [{ name: 'Wide Flange', spec: 'A992' }, { name: 'Connections', spec: 'Bolted/Welded' }] }] },
-      { group: 'DIV 15-23 — MEP SYSTEMS', items: [{ num: '23 00 00', name: 'HVAC + Plumbing + Electrical', qty: gsf || 0, unit: 'SF', unitCost: Math.round(costPerSF * 0.33), total: Math.round(hardCosts * 0.34), details: [{ name: 'HVAC', spec: 'VAV System' }, { name: 'Electrical', spec: 'LED + Panels' }] }] }
-    ],
+    summary: { costPerSF: Math.round(totalMid / divisor), hardCosts, softCosts, contingencyAmt, escalationAmt, totalMid, totalLow, totalHigh, gcAmt, ohpAmt },
+    divisions,
     contingencyScenarios: [
       { scenario: 'Conservative', yearRange: '2026-2027', pctAdded: 6.0, amount: Math.round(totalMid * 0.06), total: Math.round(totalMid * 1.06), factors: ['Stable labor market', 'Normal material lead times', 'Low procurement volatility'] },
       { scenario: 'Base Case', yearRange: '2028-2029', pctAdded: 10.0, amount: Math.round(totalMid * 0.1), total: Math.round(totalMid * 1.1), factors: ['Moderate inflation', 'Regional labor pressure', 'Typical tariff exposure'] },
@@ -1169,7 +1315,7 @@ function buildLocalEstimate({ projectName, buildingType, gsf, stories, location,
       { icon: '⚠', title: 'Long-lead equipment', desc: 'Major MEP equipment may impact schedule float.', severity: 'med' },
       { icon: '📈', title: 'Escalation volatility', desc: 'Material pricing remains sensitive to market swings.', severity: 'med' }
     ],
-    narrative: `This is a fallback conceptual estimate for ${projectName} in ${location}, developed from the fillable input fields. The AI service call was unavailable, so this output uses benchmark unit-cost logic and standard cost composition assumptions. Validate with quantity takeoff and local subcontractor pricing before procurement.`
+    narrative: `This conceptual estimate for ${projectName} is calibrated from a baseline of ${fmt(Math.round(totalMid / divisor))}/SF using building type, location, delivery year, stories, complexity, and estimate phase. Costs are distributed across CSI MasterFormat divisions with editable adjustments. Validate with quantity takeoff and local subcontractor pricing before procurement.`
   };
 }
 
@@ -1182,6 +1328,16 @@ async function runEstimate() {
   const stories    = parseInt(document.getElementById('stories').value) || 1;
   const location   = document.getElementById('location').value || 'Midwest, USA';
   const deliveryYear = parseInt(document.getElementById('deliveryYear').value) || 2029;
+  const estimatePhase = document.getElementById('estimatePhase').value || 'Conceptual';
+  const projectNature = document.getElementById('projectNature').value || 'new';
+  const laborBasis = document.getElementById('laborBasis').value || 'nonunion';
+  const siteComplexity = document.getElementById('siteComplexity').value || 'medium';
+  const structureType = document.getElementById('structureType').value || 'steel';
+  const envelopeType = document.getElementById('envelopeType').value || 'standard';
+  const mepComplexity = document.getElementById('mepComplexity').value || 'medium';
+  const contingencyPct = parseFloat(document.getElementById('contingencyPct').value) || 8;
+  const gcPct = parseFloat(document.getElementById('gcPct').value) || 8;
+  const ohpPct = parseFloat(document.getElementById('ohpPct').value) || 7;
   const scopeNotes = document.getElementById('scopeNotes').value || '';
 
   if (!gsfRaw && !nlInput) {
@@ -1199,6 +1355,7 @@ async function runEstimate() {
     ...drawingTexts.map((t,i) => `DRAWING ${i+1} (${uploadedDrawings[i]?.name}): ${t.slice(0,800)}`),
     ...specTexts.map((t,i)    => `SPEC ${i+1} (${uploadedSpecs[i]?.name}): ${t.slice(0,800)}`)
   ].join('\n\n');
+  const inferredDivisions = extractDocumentScope([drawingTexts.join(' '), specTexts.join(' ')].join(' '));
 
   const escalationYears = deliveryYear - 2026;
   const prompt = `You are a senior construction cost estimator with 30 years of experience. Generate a detailed construction cost estimate.
@@ -1212,6 +1369,18 @@ PROJECT:
 - Location: ${location}
 - Delivery Year: ${deliveryYear} (${escalationYears} years from now)
 - Scope Notes: ${scopeNotes || 'None'}
+- Estimate Phase: ${estimatePhase}
+- Project Nature: ${projectNature}
+- Labor Basis: ${laborBasis}
+- Site Complexity: ${siteComplexity}
+- Structure Type: ${structureType}
+- Envelope Type: ${envelopeType}
+- MEP Complexity: ${mepComplexity}
+- Contingency: ${contingencyPct}%
+- General Requirements: ${gcPct}%
+- OHP: ${ohpPct}%
+- Scope Notes: ${scopeNotes || 'None'}
+- CSI hints from uploaded docs: ${inferredDivisions.join(', ') || 'No docs uploaded — infer all applicable divisions using assumptions.'}
 ${fileContext ? '\nUPLOADED DOCUMENTS:\n' + fileContext : ''}
 
 Return ONLY valid JSON, no markdown fences. Structure:
@@ -1245,6 +1414,11 @@ Return ONLY valid JSON, no markdown fences. Structure:
           "unit": "LS",
           "unitCost": <number>,
           "total": <number>,
+          "basis": "<quantity or basis>",
+          "assumptions": "<short assumptions>",
+          "confidence": "HIGH|MEDIUM|LOW",
+          "adjustmentPct": <number>,
+          "notIncluded": <boolean>,
           "details": [{"name": "<string>","spec": "<string>"}]
         }
       ]
@@ -1280,8 +1454,11 @@ Return ONLY valid JSON, no markdown fences. Structure:
 }
 
 REQUIREMENTS:
-- Include ALL 25 CSI MasterFormat divisions (01-33 plus Soft Costs)
-- Each division needs 2-4 line items with 2-4 detail sub-items each
+- Use CSI MasterFormat divisions 01 through 33 as the core structure.
+- Keep MEP separate as 21, 22, 23, 26, 27, 28 (never lump into one MEP bucket).
+- Include optional divisions 34, 35, 40-48 only when applicable to project scope.
+- For each division include: division number and name, cost, $/SF, percent of total, quantity/basis, assumptions, confidence level, editable adjustmentPct.
+- For non-applicable divisions, return cost 0 with notIncluded=true and a short explanation.
 - Use realistic ${location} market pricing in 2026 dollars
 - Quantity takeoffs based on ${gsf || 'estimated'} GSF and ${stories} stories
 - Escalation: ${escalationYears} years compound at 4-7%/yr for ${deliveryYear} delivery
@@ -1326,12 +1503,12 @@ REQUIREMENTS:
     }
 
     setProgress(100, '✓ Estimate complete', 'done');
-    estimateData = { ...est, projectName, buildingType, gsf: est.extractedParams?.gsf || gsf, stories, location, deliveryYear };
+    estimateData = { ...est, projectName, buildingType, gsf: est.extractedParams?.gsf || gsf, stories, location, deliveryYear, estimatePhase };
     renderResults(est, estimateData);
 
   } catch(err) {
-    const fallback = buildLocalEstimate({ projectName, buildingType, gsf, stories, location, deliveryYear, scopeNotes });
-    estimateData = { ...fallback, projectName, buildingType, gsf, stories, location, deliveryYear };
+    const fallback = buildLocalEstimate({ projectName, buildingType, gsf, stories, location, deliveryYear, scopeNotes, estimatePhase, projectNature, laborBasis, siteComplexity, structureType, envelopeType, mepComplexity, contingencyPct, gcPct, ohpPct });
+    estimateData = { ...fallback, projectName, buildingType, gsf, stories, location, deliveryYear, estimatePhase };
     renderResults(fallback, estimateData);
     setProgress(100, '⚠ AI fetch failed. Fallback estimate generated.', 'done');
     console.error(err);
@@ -1376,6 +1553,7 @@ function renderResults(est, meta) {
   const tbody = document.getElementById('divisionsBody');
   tbody.innerHTML = '';
   const totalCost = s.totalMid || 1;
+  const projectGsf = gsf || 1;
 
   (est.divisions || []).forEach((group, gi) => {
     const groupId = 'g' + gi;
@@ -1385,7 +1563,7 @@ function renderResults(est, meta) {
     const gRow = document.createElement('tr');
     gRow.className = 'div-group-row';
     gRow.dataset.group = groupId;
-    gRow.innerHTML = `<td colspan="7"><span class="group-arrow open" id="arr-${groupId}">▶</span>${group.group} <span style="font-family:var(--mono);font-size:10px;color:var(--muted);font-weight:400;margin-left:8px">${fmtK(groupTotal)}</span></td>`;
+    gRow.innerHTML = `<td colspan="10"><span class="group-arrow open" id="arr-${groupId}">▶</span>${group.group} <span style="font-family:var(--mono);font-size:10px;color:var(--muted);font-weight:400;margin-left:8px">${fmtK(groupTotal)}</span></td>`;
     tbody.appendChild(gRow);
 
     gRow.addEventListener('click', () => {
@@ -1399,6 +1577,8 @@ function renderResults(est, meta) {
     (group.items || []).forEach((item, idx) => {
       const pct = ((item.total || 0) / totalCost * 100).toFixed(1);
       const detailId = `det-${groupId}-${idx}`;
+      const divId = `adj-${groupId}-${idx}`;
+      const adjustedCost = Math.round((item.total || 0) * (1 + ((item.adjustmentPct || 0) / 100)));
 
       const tr = document.createElement('tr');
       tr.className = 'div-item-row';
@@ -1406,11 +1586,14 @@ function renderResults(est, meta) {
       tr.innerHTML = `
         <td class="div-num">${item.num || ''}</td>
         <td class="div-name">${item.name} <span style="font-size:9px;color:var(--muted)">▾</span></td>
-        <td class="div-qty">${(item.qty || 0).toLocaleString()}</td>
-        <td class="div-unit">${item.unit || 'SF'}</td>
-        <td class="div-ucost">${fmt(item.unitCost || 0)}</td>
         <td class="div-total">${fmtK(item.total || 0)}</td>
-        <td class="div-pct">${pct}%</td>`;
+        <td class="div-ucost">${fmt(Math.round((item.total || 0) / projectGsf))}</td>
+        <td class="div-pct">${pct}%</td>
+        <td class="div-qty">${item.notIncluded ? 'Not included / $0' : (item.basis || `${(item.qty || 0).toLocaleString()} ${item.unit || ''}`)}</td>
+        <td class="div-assume">${item.assumptions || '—'}</td>
+        <td class="div-confidence">${item.confidence || 'MEDIUM'}</td>
+        <td><input class="div-adjust" id="${divId}" type="number" step="1" value="${item.adjustmentPct || 0}" onclick="event.stopPropagation()"></td>
+        <td class="div-total">${fmtK(adjustedCost)}</td>`;
       tbody.appendChild(tr);
 
       const dtr = document.createElement('tr');
@@ -1420,7 +1603,7 @@ function renderResults(est, meta) {
       const chips = (item.details || []).map(d =>
         `<div class="detail-chip"><div class="detail-chip-name">${d.name}</div><div class="detail-chip-spec">${d.spec}</div></div>`
       ).join('');
-      dtr.innerHTML = `<td colspan="7"><div class="detail-chips">${chips}</div></td>`;
+      dtr.innerHTML = `<td colspan="10"><div class="detail-chips">${chips}</div></td>`;
       tbody.appendChild(dtr);
 
       tr.addEventListener('click', () => {
@@ -1431,9 +1614,14 @@ function renderResults(est, meta) {
     const stRow = document.createElement('tr');
     stRow.className = 'subtotal-row';
     stRow.dataset.parent = groupId;
-    stRow.innerHTML = `<td colspan="5">Subtotal — ${group.group}</td><td>${fmtK(groupTotal)}</td><td>${(groupTotal/totalCost*100).toFixed(1)}%</td>`;
+    stRow.innerHTML = `<td colspan="10">Subtotal — ${group.group}: ${fmtK(groupTotal)} (${(groupTotal/totalCost*100).toFixed(1)}%)</td>`;
     tbody.appendChild(stRow);
   });
+
+  const sanity = runSanityCheck(meta, s, est);
+  const warningEl = document.getElementById('sanityWarning');
+  warningEl.textContent = sanity.message;
+  warningEl.classList.toggle('visible', sanity.flag);
 
   // Contingency
   const contEl = document.getElementById('contScenarios');
@@ -1495,16 +1683,61 @@ function renderResults(est, meta) {
 }
 
 // ── Export ──
+function runSanityCheck(meta, summary, est) {
+  const ranges = {
+    office: [240, 520], medical: [360, 780], industrial: [180, 450], residential: [220, 520],
+    education: [280, 620], hospitality: [280, 620], data_center: [500, 1200], laboratory: [450, 1100],
+    warehouse: [140, 360], retail: [190, 460]
+  };
+  const cpsf = summary.costPerSF || 0;
+  const [low, high] = ranges[meta.buildingType] || [200, 600];
+  const topDivs = (est.divisions || [])
+    .flatMap(g => g.items || [])
+    .sort((a,b)=>(b.total||0)-(a.total||0))
+    .slice(0,3)
+    .map(i => i.name)
+    .join(', ');
+  if (cpsf < low || cpsf > high) {
+    return { flag: true, message: `This estimate appears ${cpsf > high ? 'high' : 'low'} for a ${(meta.gsf || 0).toLocaleString()} SF ${meta.buildingType.replace('_',' ')} building in ${meta.location}. The main drivers are ${topDivs}, escalation to ${meta.deliveryYear}, and contingency.` };
+  }
+  return { flag: false, message: '' };
+}
+
+function recalculateEstimate() {
+  if (!estimateData?.divisions) return;
+  estimateData.divisions.forEach((group, gi) => {
+    group.items?.forEach((item, ii) => {
+      const input = document.getElementById(`adj-g${gi}-${ii}`);
+      item.adjustmentPct = parseFloat(input?.value || 0) || 0;
+      item.total = Math.round((item.total || 0) * (1 + item.adjustmentPct / 100));
+    });
+  });
+  const newHard = estimateData.divisions.flatMap(g => g.items || []).reduce((s, i) => s + (i.total || 0), 0);
+  const oldHard = estimateData.summary.hardCosts || 1;
+  const ratio = newHard / oldHard;
+  estimateData.summary.hardCosts = newHard;
+  estimateData.summary.softCosts = Math.round((estimateData.summary.softCosts || 0) * ratio);
+  estimateData.summary.contingencyAmt = Math.round((estimateData.summary.contingencyAmt || 0) * ratio);
+  estimateData.summary.escalationAmt = Math.round((estimateData.summary.escalationAmt || 0) * ratio);
+  estimateData.summary.totalMid = estimateData.summary.hardCosts + estimateData.summary.softCosts + estimateData.summary.contingencyAmt + estimateData.summary.escalationAmt + (estimateData.summary.gcAmt || 0) + (estimateData.summary.ohpAmt || 0);
+  estimateData.summary.costPerSF = Math.round((estimateData.summary.totalMid || 0) / Math.max(1, estimateData.gsf || 1));
+  renderResults(estimateData, estimateData);
+}
+
 function exportCSV() {
   if (!estimateData) return;
-  const rows = [['Division','Item','Qty','Unit','Unit Cost','Total','% of Total']];
+  const rows = [['Division','Item','Cost','$/SF','% of Total','Quantity/Basis','Assumptions','Confidence','Adjustment %']];
   const total = estimateData.summary?.totalMid || 1;
   (estimateData.divisions||[]).forEach(group => {
     rows.push([group.group,'','','','','','']);
     (group.items||[]).forEach(item => rows.push([
-      group.group, item.name, item.qty, item.unit,
-      item.unitCost, item.total,
-      ((item.total||0)/total*100).toFixed(1)+'%'
+      group.group, item.name, item.total,
+      Math.round((item.total||0)/Math.max(1, estimateData.gsf || 1)),
+      ((item.total||0)/total*100).toFixed(1)+'%',
+      item.notIncluded ? 'Not included / $0' : (item.basis || ''),
+      item.assumptions || '',
+      item.confidence || 'MEDIUM',
+      item.adjustmentPct || 0
     ]));
   });
   const csv = rows.map(r => r.map(c=>`"${c}"`).join(',')).join('\n');
